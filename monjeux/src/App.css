@@ -1,0 +1,158 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  min-height: 100vh;
+  text-align: center;
+}
+
+
+.accueil h1 {
+  font-size: 3rem;
+  margin-bottom: 10px;
+}
+
+.description {
+  max-width: 400px;
+  text-align: center;
+  color: #aaa;
+  margin-bottom: 30px;
+}
+
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  width: 250px;
+}
+
+.formulaire input {
+  width: 100%;
+  padding: 12px;
+  font-size: 1rem;
+  border: 2px solid #444;
+  border-radius: 8px;
+  background: #1a1a1a;
+  color: white;
+  text-align: center;
+}
+
+.formulaire input:focus {
+  outline: none;
+  border-color: #646cff;
+}
+
+
+.info-jeu {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+}
+
+.grille {
+  display: grid;
+  gap: 2px;
+  background: #111;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.tuile {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.tuile:hover {
+  transform: scale(1.05);
+}
+
+.tuile.cachee {
+  background: #333;
+  color: #666;
+}
+
+.tuile.revelee {
+  color: #000;
+}
+
+.aide {
+  margin-top: 20px;
+  color: #888;
+  text-align: center;
+  max-width: 400px;
+}
+
+.erreur {
+  color: #ff6b6b;
+  background: #2a1a1a;
+  padding: 15px 25px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+
+.score h1 {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+}
+
+.resultat {
+  background: #1a1a1a;
+  padding: 20px 40px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.resultat p {
+  margin: 10px 0;
+}
+
+.sauvegarde {
+  color: #4CAF50;
+}
+
+.highscores {
+  background: #1a1a1a;
+  padding: 20px 40px;
+  border-radius: 12px;
+  min-width: 250px;
+  margin-bottom: 30px;
+}
+
+.highscores ol {
+  text-align: left;
+  padding-left: 25px;
+}
+
+.highscores li {
+  margin: 8px 0;
+}
+
+
+button {
+  padding: 12px 30px;
+  font-size: 1.1rem;
+  background: #646cff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button:hover {
+  background: #535bf2;
+}
