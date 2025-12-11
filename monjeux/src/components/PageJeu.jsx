@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Grille from './Grille'
 import Inventory from './Inventory'
 import BattleModal from './BattleModal'
+import { DEGATS_PIEGE } from '../gameLogic'
 
 const API_URL = 'http://localhost:4000/api'
 
@@ -32,10 +33,20 @@ function PageJeu({ pseudo, setResultat }) {
     setTimeout(() => setMessage(null), 2000)
   }
 
+  const verifierGameOver = (nouveauHp) => {
+    if (nouveauHp <= 0) {
+      const temps = Math.floor((Date.now() - tempsDebut) / 1000)
+      setResultat({ victoire: false, tuiles: tuilesRevelees.length, temps })
+      navigate('/score')
+      return true
+    }
+    return false
+  }
+
   const chargerNiveau = async () => {
     try {
       setChargement(true)
-      const reponse = await fetch(`${API_URL}/levels/2`)
+      const reponse = await fetch(`${API_URL}/levels/3`)
       if (!reponse.ok) throw new Error('Erreur')
 
       const donnees = await reponse.json()
@@ -62,13 +73,9 @@ function PageJeu({ pseudo, setResultat }) {
   }
 
   const estAdjacente = (x, y) => {
-    return tuilesRevelees.some(t => {
-      const typeBase = niveau.grid[t.y][t.x].split(':')[0]
-      if (typeBase === 'W') return false
-      const dx = Math.abs(t.x - x)
-      const dy = Math.abs(t.y - y)
-      return (dx === 1 && dy === 0) || (dx === 0 && dy === 1)
-    })
+    const dx = Math.abs(positionJoueur.x - x)
+    const dy = Math.abs(positionJoueur.y - y)
+    return (dx === 1 && dy === 0) || (dx === 0 && dy === 1)
   }
 
   const getSousType = (type) => type.includes(':') ? type.split(':')[1] : null
@@ -93,6 +100,16 @@ function PageJeu({ pseudo, setResultat }) {
       afficherMessage(`Item ${sousType} trouve`)
     }
 
+    if (typeBase === 'O') {
+      const itemRequis = getItemRequis(sousType)
+      if (!items.includes(itemRequis)) {
+        const nouveauHp = hp - DEGATS_PIEGE
+        setHp(nouveauHp)
+        afficherMessage(`Piege ! -${DEGATS_PIEGE} HP`)
+        verifierGameOver(nouveauHp)
+      }
+    }
+
     if (typeBase === 'E') {
       const temps = Math.floor((Date.now() - tempsDebut) / 1000)
       setResultat({ victoire: true, tuiles: tuilesRevelees.length, temps })
@@ -114,12 +131,13 @@ function PageJeu({ pseudo, setResultat }) {
         return
       }
 
-      if (typeBase === 'O') {
-        const itemRequis = getItemRequis(sousType)
-        if (!items.includes(itemRequis)) {
-          afficherMessage(`Obstacle, item ${itemRequis} requis`)
+      if (typeBase === 'M') {
+        if (items.length === 0) {
+          afficherMessage('Il faut une arme pour combattre !')
           return
         }
+        setCombat({ x, y, monstre: sousType })
+        return
       }
 
       setPositionJoueur({ x, y })
@@ -130,7 +148,8 @@ function PageJeu({ pseudo, setResultat }) {
     if (!estAdjacente(x, y)) return
 
     if (typeBase === 'M') {
-      setCombat({ x, y, monstre: sousType })
+      setTuilesRevelees([...tuilesRevelees, { x, y }])
+      afficherMessage('Un monstre ! Il faut une arme pour combattre')
       return
     }
 
@@ -146,25 +165,36 @@ function PageJeu({ pseudo, setResultat }) {
       setTuilesRevelees([...tuilesRevelees, { x, y }])
       const itemRequis = getItemRequis(sousType)
       if (!items.includes(itemRequis)) {
-        afficherMessage(`Obstacle, item ${itemRequis} requis`)
-        return
+        afficherMessage(`Danger ! Item ${itemRequis} recommande`)
       }
     }
 
     setTuilesRevelees([...tuilesRevelees, { x, y }])
   }
 
-  const handleVictoireCombat = () => {
-    if (combat) {
+  const handleCombatTermine = (resultat) => {
+    if (resultat.victoire) {
+      setHp(resultat.hpRestant)
       setTuilesRevelees([...tuilesRevelees, combat])
+
       const nouvelleGrille = niveau.grid.map((ligne, y) =>
         ligne.map((cellule, x) =>
           (x === combat.x && y === combat.y) ? 'C' : cellule
         )
       )
       setNiveau({ ...niveau, grid: nouvelleGrille })
-      afficherMessage('Monstre vaincu')
+      afficherMessage(`Victoire ! -${resultat.degatsSubis} HP`)
+
+      verifierGameOver(resultat.hpRestant)
+    } else {
+      setHp(0)
+      verifierGameOver(0)
     }
+    setCombat(null)
+  }
+
+  const handleFuir = () => {
+    afficherMessage('Fuite !')
     setCombat(null)
   }
 
@@ -215,9 +245,10 @@ function PageJeu({ pseudo, setResultat }) {
       {combat && (
         <BattleModal
           monstre={combat.monstre}
-          aArme={items.length > 0}
-          onVictoire={handleVictoireCombat}
-          onFermer={() => setCombat(null)}
+          hpJoueur={hp}
+          items={items}
+          onCombatTermine={handleCombatTermine}
+          onFuir={handleFuir}
         />
       )}
 

@@ -322,3 +322,42 @@ button:hover {
   border-radius: 4px;
   font-weight: bold;
 }
+
+/* Combat */
+.combat-stats {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.combat-ennemi, .combat-joueur {
+  text-align: center;
+}
+
+.combat-vs {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #666;
+}
+
+.combat-preview {
+  margin: 15px 0;
+  padding: 10px;
+  background: #222;
+  border-radius: 8px;
+}
+
+.combat-boutons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.btn-secondaire {
+  background: #444;
+}
+
+.btn-secondaire:hover {
+  background: #555;
+}
