@@ -1,4 +1,4 @@
-import { getStatsEnnemi, calculerDegatsJoueur, simulerCombat } from '../gameLogic'
+import { getStatsEnnemi, calculerDegatsJoueur, simulerCombat } from '../../utils/combatSystem'
 
 function BattleModal({ monstre, hpJoueur, items, onCombatTermine, onFuir }) {
   const statsEnnemi = getStatsEnnemi(monstre)

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-function PageAccueil({ setPseudo }) {
+function PageAccueil({ setPseudo, setNiveauChoisi }) {
   const [pseudoLocal, setPseudoLocal] = useState('')
+  const [niveau, setNiveau] = useState(1)
   const navigate = useNavigate()
 
   const handleJouer = () => {
@@ -11,6 +12,7 @@ function PageAccueil({ setPseudo }) {
       return
     }
     setPseudo(pseudoLocal)
+    setNiveauChoisi(niveau)
     navigate('/jeu')
   }
 
@@ -31,6 +33,13 @@ function PageAccueil({ setPseudo }) {
           onChange={(e) => setPseudoLocal(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleJouer()}
         />
+
+        <select value={niveau} onChange={(e) => setNiveau(Number(e.target.value))}>
+          <option value={1}>Niveau 1</option>
+          <option value={2}>Niveau 2</option>
+          <option value={3}>Niveau 3</option>
+        </select>
+
         <button onClick={handleJouer}>Jouer</button>
       </div>
     </div>

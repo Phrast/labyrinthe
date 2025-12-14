@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Grille from './Grille'
-import Inventory from './Inventory'
-import BattleModal from './BattleModal'
-import { DEGATS_PIEGE } from '../gameLogic'
+import Grille from '../game/Grille'
+import Inventory from '../game/Inventory'
+import BattleModal from '../game/BattleModal'
+import { HP_INITIAL, DEGATS_PIEGE, TILE_TYPES } from '../../constants/gameConstants'
+import { fetchLevel } from '../../utils/api'
+import { parseTileType, isTileRevealed } from '../../utils/tileUtils'
+import { isAdjacent, getItemRequis, findStartPosition, updateGridCell } from '../../utils/gameRules'
+import { calculerTempsEcoule } from '../../utils/scoreUtils'
 
-const API_URL = 'http://localhost:4000/api'
-
-function PageJeu({ pseudo, setResultat }) {
+function PageJeu({ pseudo, niveauChoisi, setResultat }) {
   const navigate = useNavigate()
 
   const [niveau, setNiveau] = useState(null)
@@ -17,7 +19,7 @@ function PageJeu({ pseudo, setResultat }) {
   const [erreur, setErreur] = useState(null)
   const [tempsDebut, setTempsDebut] = useState(null)
 
-  const [hp, setHp] = useState(100)
+  const [hp, setHp] = useState(HP_INITIAL)
   const [cles, setCles] = useState([])
   const [items, setItems] = useState([])
 
@@ -35,7 +37,7 @@ function PageJeu({ pseudo, setResultat }) {
 
   const verifierGameOver = (nouveauHp) => {
     if (nouveauHp <= 0) {
-      const temps = Math.floor((Date.now() - tempsDebut) / 1000)
+      const temps = calculerTempsEcoule(tempsDebut)
       setResultat({ victoire: false, tuiles: tuilesRevelees.length, temps })
       navigate('/score')
       return true
@@ -46,23 +48,16 @@ function PageJeu({ pseudo, setResultat }) {
   const chargerNiveau = async () => {
     try {
       setChargement(true)
-      const reponse = await fetch(`${API_URL}/levels/3`)
-      if (!reponse.ok) throw new Error('Erreur')
+      setErreur(null)
 
-      const donnees = await reponse.json()
+      const donnees = await fetchLevel(niveauChoisi)
+      const posDepart = findStartPosition(donnees.grid)
+
       setNiveau(donnees)
-
-      let posDepart = { x: 0, y: 0 }
-      donnees.grid.forEach((ligne, y) => {
-        ligne.forEach((cellule, x) => {
-          if (cellule === 'S') posDepart = { x, y }
-        })
-      })
-
       setPositionJoueur(posDepart)
       setTuilesRevelees([posDepart])
       setTempsDebut(Date.now())
-      setHp(100)
+      setHp(HP_INITIAL)
       setCles([])
       setItems([])
       setChargement(false)
@@ -72,36 +67,22 @@ function PageJeu({ pseudo, setResultat }) {
     }
   }
 
-  const estAdjacente = (x, y) => {
-    const dx = Math.abs(positionJoueur.x - x)
-    const dy = Math.abs(positionJoueur.y - y)
-    return (dx === 1 && dy === 0) || (dx === 0 && dy === 1)
-  }
-
-  const getSousType = (type) => type.includes(':') ? type.split(':')[1] : null
-
-  const getItemRequis = (obstacle) => {
-    const map = { fire: 'water_bucket', rock: 'pickaxe', water: 'swim_boots' }
-    return map[obstacle] || null
-  }
-
   const appliquerEffetTuile = (x, y) => {
     const typeTuile = niveau.grid[y][x]
-    const typeBase = typeTuile.split(':')[0]
-    const sousType = getSousType(typeTuile)
+    const { base, subType } = parseTileType(typeTuile)
 
-    if (typeBase === 'K' && sousType && !cles.includes(sousType)) {
-      setCles([...cles, sousType])
-      afficherMessage(`Cle ${sousType} trouvee`)
+    if (base === TILE_TYPES.KEY && subType && !cles.includes(subType)) {
+      setCles([...cles, subType])
+      afficherMessage(`Cle ${subType} trouvee`)
     }
 
-    if (typeBase === 'I' && sousType && !items.includes(sousType)) {
-      setItems([...items, sousType])
-      afficherMessage(`Item ${sousType} trouve`)
+    if (base === TILE_TYPES.ITEM && subType && !items.includes(subType)) {
+      setItems([...items, subType])
+      afficherMessage(`Item ${subType} trouve`)
     }
 
-    if (typeBase === 'O') {
-      const itemRequis = getItemRequis(sousType)
+    if (base === TILE_TYPES.TRAP) {
+      const itemRequis = getItemRequis(subType)
       if (!items.includes(itemRequis)) {
         const nouveauHp = hp - DEGATS_PIEGE
         setHp(nouveauHp)
@@ -110,33 +91,32 @@ function PageJeu({ pseudo, setResultat }) {
       }
     }
 
-    if (typeBase === 'E') {
-      const temps = Math.floor((Date.now() - tempsDebut) / 1000)
+    if (base === TILE_TYPES.EXIT) {
+      const temps = calculerTempsEcoule(tempsDebut)
       setResultat({ victoire: true, tuiles: tuilesRevelees.length, temps })
       navigate('/score')
     }
   }
 
   const handleTuileClick = (x, y) => {
-    const dejaRevelee = tuilesRevelees.some(t => t.x === x && t.y === y)
+    const dejaRevelee = isTileRevealed(tuilesRevelees, x, y)
     const typeTuile = niveau.grid[y][x]
-    const typeBase = typeTuile.split(':')[0]
-    const sousType = getSousType(typeTuile)
+    const { base, subType } = parseTileType(typeTuile)
 
     if (dejaRevelee) {
-      if (typeBase === 'W') return
+      if (base === TILE_TYPES.WALL) return
 
-      if (typeBase === 'D' && !cles.includes(sousType)) {
-        afficherMessage(`Porte verrouillee, cle ${sousType} requise`)
+      if (base === TILE_TYPES.DOOR && !cles.includes(subType)) {
+        afficherMessage(`Porte verrouillee, cle ${subType} requise`)
         return
       }
 
-      if (typeBase === 'M') {
+      if (base === TILE_TYPES.MONSTER) {
         if (items.length === 0) {
           afficherMessage('Il faut une arme pour combattre !')
           return
         }
-        setCombat({ x, y, monstre: sousType })
+        setCombat({ x, y, monstre: subType })
         return
       }
 
@@ -145,25 +125,25 @@ function PageJeu({ pseudo, setResultat }) {
       return
     }
 
-    if (!estAdjacente(x, y)) return
+    if (!isAdjacent(positionJoueur, { x, y })) return
 
-    if (typeBase === 'M') {
+    if (base === TILE_TYPES.MONSTER) {
       setTuilesRevelees([...tuilesRevelees, { x, y }])
       afficherMessage('Un monstre ! Il faut une arme pour combattre')
       return
     }
 
-    if (typeBase === 'D') {
+    if (base === TILE_TYPES.DOOR) {
       setTuilesRevelees([...tuilesRevelees, { x, y }])
-      if (!cles.includes(sousType)) {
-        afficherMessage(`Porte verrouillee, cle ${sousType} requise`)
+      if (!cles.includes(subType)) {
+        afficherMessage(`Porte verrouillee, cle ${subType} requise`)
         return
       }
     }
 
-    if (typeBase === 'O') {
+    if (base === TILE_TYPES.TRAP) {
       setTuilesRevelees([...tuilesRevelees, { x, y }])
-      const itemRequis = getItemRequis(sousType)
+      const itemRequis = getItemRequis(subType)
       if (!items.includes(itemRequis)) {
         afficherMessage(`Danger ! Item ${itemRequis} recommande`)
       }
@@ -177,11 +157,7 @@ function PageJeu({ pseudo, setResultat }) {
       setHp(resultat.hpRestant)
       setTuilesRevelees([...tuilesRevelees, combat])
 
-      const nouvelleGrille = niveau.grid.map((ligne, y) =>
-        ligne.map((cellule, x) =>
-          (x === combat.x && y === combat.y) ? 'C' : cellule
-        )
-      )
+      const nouvelleGrille = updateGridCell(niveau.grid, combat.x, combat.y, TILE_TYPES.CLEAR)
       setNiveau({ ...niveau, grid: nouvelleGrille })
       afficherMessage(`Victoire ! -${resultat.degatsSubis} HP`)
 
@@ -198,14 +174,18 @@ function PageJeu({ pseudo, setResultat }) {
     setCombat(null)
   }
 
-  if (chargement) return <div className="page jeu"><p>Chargement...</p></div>
+  if (chargement) {
+    return <div className="page jeu"><p>Chargement...</p></div>
+  }
 
-  if (erreur) return (
-    <div className="page jeu">
-      <p className="erreur">{erreur}</p>
-      <button onClick={chargerNiveau}>Reessayer</button>
-    </div>
-  )
+  if (erreur) {
+    return (
+      <div className="page jeu">
+        <p className="erreur">{erreur}</p>
+        <button onClick={chargerNiveau}>Reessayer</button>
+      </div>
+    )
+  }
 
   return (
     <div className="page jeu">

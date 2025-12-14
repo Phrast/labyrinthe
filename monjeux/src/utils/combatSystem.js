@@ -1,16 +1,4 @@
-export const ENNEMIS = {
-  goblin: { hp: 14, attack: 3, nom: 'Gobelin' },
-  slime: { hp: 10, attack: 2, nom: 'Slime' },
-  orc: { hp: 20, attack: 5, nom: 'Orc' }
-}
-
-export const ARMES = {
-  pickaxe: { degats: 8, nom: 'Pioche' },
-  water_bucket: { degats: 5, nom: 'Seau' },
-  swim_boots: { degats: 3, nom: 'Bottes' }
-}
-
-export const DEGATS_PIEGE = 15
+import { ENNEMIS, ARMES } from '../constants/gameConstants'
 
 export function calculerDegatsJoueur(items) {
   if (items.length === 0) return 2

@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-
-const API_URL = 'http://localhost:4000/api'
+import { fetchHighscores, saveHighscore } from '../../utils/api'
+import { calculerScore } from '../../utils/scoreUtils'
 
 function PageScore({ pseudo, victoire, tuiles, temps }) {
-  const navigate = useNavigate() 
+  const navigate = useNavigate()
   const [highscores, setHighscores] = useState([])
   const [scoreSauvegarde, setScoreSauvegarde] = useState(false)
-  
-  const calculerScore = () => {
-    return Math.max(0, 1000 - (tuiles * 10) - (temps * 2))
-  }
+
+  const score = calculerScore(tuiles, temps)
 
   useEffect(() => {
     if (victoire) {
@@ -21,29 +19,18 @@ function PageScore({ pseudo, victoire, tuiles, temps }) {
 
   const sauvegarderScore = async () => {
     try {
-      await fetch(`${API_URL}/highscores`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          playerName: pseudo,
-          score: calculerScore(),
-          levelId: 1
-        })
-      })
+      await saveHighscore(pseudo, score, 1)
       setScoreSauvegarde(true)
-    } catch (err) {
+    } catch {
       console.log('Erreur sauvegarde score')
     }
   }
 
   const chargerHighscores = async () => {
     try {
-      const reponse = await fetch(`${API_URL}/highscores`)
-      if (reponse.ok) {
-        const donnees = await reponse.json()
-        setHighscores(donnees)
-      }
-    } catch (err) {
+      const donnees = await fetchHighscores()
+      setHighscores(donnees)
+    } catch {
       console.log('Erreur chargement highscores')
     }
   }
@@ -60,7 +47,7 @@ function PageScore({ pseudo, victoire, tuiles, temps }) {
         <p>Joueur: <strong>{pseudo}</strong></p>
         <p>Tuiles révélées: <strong>{tuiles}</strong></p>
         <p>Temps: <strong>{temps} secondes</strong></p>
-        {victoire && <p>Score: <strong>{calculerScore()} points</strong></p>}
+        {victoire && <p>Score: <strong>{score} points</strong></p>}
         {scoreSauvegarde && <p className="sauvegarde">✓ Score enregistré !</p>}
       </div>
 
